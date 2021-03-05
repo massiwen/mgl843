@@ -12,6 +12,7 @@ export class GeneralHandler {
 
 
     runOnProject(project: Project) {
+        //WARNING -  when calling these function, only global variable and passed parameters are visible.
         let tasks = [this.addClassToMSE, this.addMethodToMSE,
             this.addMethodsParametersToMSE, this.addClassesAttributesToMSE]
 
@@ -25,7 +26,8 @@ export class GeneralHandler {
                 });
             }
         )
-
+        this.addTypesToMSE();
+        this.addNamespacesToMSE();
     }
 
     addClassToMSE(clazz: ClassDeclaration) {
@@ -169,6 +171,43 @@ export class GeneralHandler {
                 data.mseFile += "		(parentType (ref: " + classId + ")))\n";
             }
 
+        });
+    }
+
+
+    addOtherTypesClassToMSE(typeName: string, typeId: number) {
+        data.entitiesIds["OtherType-" + typeName] = typeId;
+
+        data.mseFile += "    (" + data.famixPrefix + ".Class (id: " + typeId + ")\n";
+        data.mseFile += "        (name '" + typeName + "')\n";
+        data.mseFile += "		(isStub true)\n";
+        data.mseFile += "		(modifiers 'public' 'final')";
+        data.mseFile += ")\n";
+    }
+
+
+    addTypesToMSE() {
+        // Handling the primitive types first
+        data.primitiveTypesTab.forEach(pt => {
+            data.entitiesIds["PrimitiveType-" + pt] = data.typesDictionary[pt];
+
+            data.mseFile += "    (" + data.famixPrefix + ".PrimitiveType (id: " + data.typesDictionary[pt] + ")\n";
+            data.mseFile += "		(name '" + pt + "')\n";
+            data.mseFile += "		(isStub true))\n";
+        });
+
+        // Handling then the other types
+        data.otherTypesTab.forEach(ot => {
+            this.addOtherTypesClassToMSE(ot, data.typesDictionary[ot]);
+        });
+    }
+
+    addNamespacesToMSE() {
+        data.namespacesTab.forEach(na => {
+            data.entitiesIds["Namespace-" + na] = data.namespacesDictionary[na];
+
+            data.mseFile += "    (" + data.famixPrefix + ".Namespace (id: " + data.namespacesDictionary[na] + ")\n";
+            data.mseFile += "		(name '" + na + "'))\n";
         });
     }
 
