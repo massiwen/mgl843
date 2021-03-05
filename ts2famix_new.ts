@@ -1,102 +1,23 @@
 import {ClassDeclaration, Project} from "ts-morph"
 import {Data} from "./Data";
+import {ClassHandler} from "./ClassHandler";
+import {FmxUtils} from "./FmxUtils";
 
-let data = new Data()
+let data = new Data();
+let fmxUtils = new FmxUtils();
 
 const project = new Project();
-
-
 project.addSourceFilesAtPaths("entities/**/*.ts");
 
 project.getSourceFiles().forEach(sourceFile => {
     console.log('\nSource file: ' + sourceFile.getBaseName());
 
     const hasClasses = sourceFile.getClasses().length > 0;
-    const hasInterfaces = sourceFile.getInterfaces().length > 0;
-
     if (hasClasses) {
-        // Initial computation
-        data.computedId = sourceFile.getClasses().length + 1;
-        sourceFile.getClasses().forEach(cl => {
-            cl.getConstructors().forEach(co => {
-                data.computedId += co.getParameters().length + 1;
-                co.getParameters().forEach(pa => {
-                    var tmpParamType = pa.getType().getText();
-                    locateTypeToCategory(convertTStypeToJava(tmpParamType));
-                });
-            });
-
-            //console.log('Class '+cl.getName()+': NbMethods='+cl.getMethods().length+', NbMembers='+cl.getMembers().length);
-            //computedId += cl.getMethods().length + cl.getMembers().length;
-            data.computedId += cl.getMethods().length + 1;
-
-            cl.getMethods().forEach(me => {
-                locateTypeToCategory(convertTStypeToJava(me.getReturnType().getText()));
-                if (me.getParameters().length > 0) {
-                    me.getParameters().forEach(pa => {
-                        locateTypeToCategory(convertTStypeToJava(pa.getType().getText()));
-                    });
-                }
-
-            });
-
-            // Checking the namespaces
-            var namespaceDefinition: string;
-            if (cl.getParentNamespace() == undefined) {
-                namespaceDefinition = "<Default Package>";
-            } else {
-                namespaceDefinition = cl.getParentNamespace().getText();
-            }
-
-            if (!data.namespacesTab.includes(namespaceDefinition)) {
-                data.namespacesTab.push(namespaceDefinition);
-            }
-        });
-        data.computedId += data.primitiveTypesTab.length + data.otherTypesTab.length + 1;
-
-        // Filling up the types dictionary
-        var tmpComputedId = data.computedId;
-        data.primitiveTypesTab.forEach(pt => {
-            data.typesDictionary[pt] = tmpComputedId++;
-        });
-        data.otherTypesTab.forEach(ot => {
-            data.typesDictionary[ot] = tmpComputedId++;
-        });
-
-        // Filling up the namespaces dictionary
-        data.namespacesTab.forEach(na => {
-            data.namespacesDictionary[na] = tmpComputedId++;
-        });
-
-        data.computedId = tmpComputedId;
-
-
-        console.log('Found classes:');
-        sourceFile.getClasses().forEach(oneClass => {
-            console.log('Class ' + oneClass.getName());
-            console.log(' Nb Modifiers :' + oneClass.getModifiers().length);
-            if (oneClass.getConstructors().length > 0) {
-                console.log(' Constructor :');
-                oneClass.getConstructors().forEach(construct => {
-                    let nbParameters: number = construct.getParameters().length;
-                    let paramOutput: string = '  Number Of Parameters: ' + nbParameters.toString();
-
-                    if (nbParameters > 0) {
-                        construct.getParameters().forEach(cons => {
-                            paramOutput += '\n   Parameter : name: ' + cons.getName() + ', type: ' + cons.getType().getText();
-                            if (cons.getType().getText() == 'string') {
-                                data.stringParameterFound = true;
-                            }
-                        });
-                    }
-                    console.log(paramOutput);
-                });
-            }
-        });
-
-
+        new ClassHandler(data, sourceFile)
     }
 
+    const hasInterfaces = sourceFile.getInterfaces().length > 0;
     if (hasInterfaces) {
         console.log('Found interfaces:');
         sourceFile.getInterfaces().forEach(inter => {
@@ -141,7 +62,7 @@ function addClassToMSE(clazz: ClassDeclaration) {
 function addMethodToMSE(clazz: ClassDeclaration) {
     if (clazz.getMethods().length > 0) {
         clazz.getMethods().forEach(meth => {
-            var tmpReturnType = convertTStypeToJava(meth.getReturnType().getText());
+            var tmpReturnType = fmxUtils.convertTsTypeToJava(meth.getReturnType().getText());
             data.entitiesIds["Method-" + meth.getName()] = data.id;
 
             data.mseFile += "    (" + data.famixPrefix + ".Method (id: " + data.id++ + ")\n";
@@ -178,7 +99,7 @@ function addMethodToMSE(clazz: ClassDeclaration) {
                         tmpString += ', ';
                     }
                     //var eleType:string = ele.getType().getText();
-                    tmpString += convertTStypeToJava(ele.getType().getText());
+                    tmpString += fmxUtils.convertTsTypeToJava(ele.getType().getText());
 
                 });
             }
@@ -198,7 +119,7 @@ function addMethodsParametersToMSE(clazz: ClassDeclaration) {
             if (me.getParameters().length > 0) {
                 const methodId = data.entitiesIds["Method-" + me.getName()];
                 me.getParameters().forEach(pa => {
-                    const tmpReturnType = convertTStypeToJava(pa.getType().getText());
+                    const tmpReturnType = fmxUtils.convertTsTypeToJava(pa.getType().getText());
                     data.entitiesIds["Parameter-" + pa.getName()] = data.id;
 
                     data.mseFile += "    (" + data.famixPrefix + ".Parameter (id: " + data.id++ + ")\n";
@@ -218,7 +139,7 @@ function addClassesAttributesToMSE(clazz: ClassDeclaration) {
     var tmpReturnType: string;
 
     clazz.getMembers().forEach(mem => {
-        tmpReturnType = convertTStypeToJava(mem.getType().getText());
+        tmpReturnType = fmxUtils.convertTsTypeToJava(mem.getType().getText());
         const classId = data.entitiesIds["Class-" + clazz.getName()];
 
         if (tmpReturnType != 'Unknown') {
@@ -306,41 +227,5 @@ function saveMSEFile(mseFile: string) {
     const fs = require('fs');
     fs.writeFileSync('msefile-test.mse', mseFile);
     console.log('\nFile successfully created!');
-}
-
-function convertTStypeToJava(tsType: string): string {
-    var javaType: string;
-    switch (tsType) {
-        case 'string':
-            javaType = 'String';
-            break;
-        case 'number':
-            javaType = 'int';
-            break;
-        case 'boolean':
-            javaType = 'bool';
-            break;
-        case 'void':
-            javaType = 'void';
-            break;
-        default:
-            javaType = 'Unknown';
-    }
-    return javaType;
-}
-
-function locateTypeToCategory(tmpParamType: string) {
-    const tmpPrimitiveTypes = ['void', 'int', 'bool'];
-    const tmpOtherTypes = ['String'];
-    if (tmpPrimitiveTypes.includes(tmpParamType)) {
-        if (!data.primitiveTypesTab.includes(tmpParamType)) {
-            data.primitiveTypesTab.push(tmpParamType);
-        }
-    }
-    if (tmpOtherTypes.includes(tmpParamType)) {
-        if (!data.otherTypesTab.includes(tmpParamType)) {
-            data.otherTypesTab.push(tmpParamType);
-        }
-    }
 }
 
