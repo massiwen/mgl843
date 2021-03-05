@@ -1,15 +1,7 @@
 import {ClassDeclaration, Project} from "ts-morph"
+import {Data} from "./Data";
 
-let id: number = 1;
-let parentClassId: number;
-let computedId: number;
-let stringParameterFound: boolean = false;
-let primitiveTypesTab: string[] = new Array();
-let otherTypesTab: string[] = new Array();
-let namespacesTab: string[] = new Array();
-let typesDictionary = {};
-let entitiesIds = {};
-let namespacesDictionary = {};
+let data = new Data()
 
 const project = new Project();
 
@@ -27,10 +19,10 @@ project.getSourceFiles().forEach(sourceFile => {
 
     if (hasClasses) {
         // Initial computation
-        computedId = sourceFile.getClasses().length + 1;
+        data.computedId = sourceFile.getClasses().length + 1;
         sourceFile.getClasses().forEach(cl => {
             cl.getConstructors().forEach(co => {
-                computedId += co.getParameters().length + 1;
+                data.computedId += co.getParameters().length + 1;
                 co.getParameters().forEach(pa => {
                     var tmpParamType = pa.getType().getText();
                     locateTypeToCategory(convertTStypeToJava(tmpParamType));
@@ -39,7 +31,7 @@ project.getSourceFiles().forEach(sourceFile => {
 
             //console.log('Class '+cl.getName()+': NbMethods='+cl.getMethods().length+', NbMembers='+cl.getMembers().length);
             //computedId += cl.getMethods().length + cl.getMembers().length;
-            computedId += cl.getMethods().length + 1;
+            data.computedId += cl.getMethods().length + 1;
 
             cl.getMethods().forEach(me => {
                 locateTypeToCategory(convertTStypeToJava(me.getReturnType().getText()));
@@ -59,27 +51,27 @@ project.getSourceFiles().forEach(sourceFile => {
                 namespaceDefinition = cl.getParentNamespace().getText();
             }
 
-            if (!namespacesTab.includes(namespaceDefinition)) {
-                namespacesTab.push(namespaceDefinition);
+            if (!data.namespacesTab.includes(namespaceDefinition)) {
+                data.namespacesTab.push(namespaceDefinition);
             }
         });
-        computedId += primitiveTypesTab.length + otherTypesTab.length + 1;
+        data.computedId += data.primitiveTypesTab.length + data.otherTypesTab.length + 1;
 
         // Filling up the types dictionary
-        var tmpComputedId = computedId;
-        primitiveTypesTab.forEach(pt => {
-            typesDictionary[pt] = tmpComputedId++;
+        var tmpComputedId = data.computedId;
+        data.primitiveTypesTab.forEach(pt => {
+            data.typesDictionary[pt] = tmpComputedId++;
         });
-        otherTypesTab.forEach(ot => {
-            typesDictionary[ot] = tmpComputedId++;
+        data.otherTypesTab.forEach(ot => {
+            data.typesDictionary[ot] = tmpComputedId++;
         });
 
         // Filling up the namespaces dictionary
-        namespacesTab.forEach(na => {
-            namespacesDictionary[na] = tmpComputedId++;
+        data.namespacesTab.forEach(na => {
+            data.namespacesDictionary[na] = tmpComputedId++;
         });
 
-        computedId = tmpComputedId;
+        data.computedId = tmpComputedId;
 
 
         console.log('Found classes:');
@@ -96,7 +88,7 @@ project.getSourceFiles().forEach(sourceFile => {
                         construct.getParameters().forEach(cons => {
                             paramOutput += '\n   Parameter : name: ' + cons.getName() + ', type: ' + cons.getType().getText();
                             if (cons.getType().getText() == 'string') {
-                                stringParameterFound = true;
+                                data.stringParameterFound = true;
                             }
                         });
                     }
@@ -138,11 +130,11 @@ saveMSEFile(mseFile);
 
 
 function addClassToMSE(clazz: ClassDeclaration) {
-    parentClassId = id;
+    data.parentClassId = data.id;
     let containerRef: number = getEntityContainerRef(clazz);
 
-    entitiesIds["Class-" + clazz.getName()] = id;
-    mseFile += "    (" + famixPrefix + ".Class (id: " + id++ + ")\n";
+    data.entitiesIds["Class-" + clazz.getName()] = data.id;
+    mseFile += "    (" + famixPrefix + ".Class (id: " + data.id++ + ")\n";
     mseFile += "        (name '" + clazz.getName() + "')\n";
     mseFile += "        (modifiers 'public')";
     mseFile += "\n        (typeContainer (ref: " + containerRef + "))";
@@ -155,12 +147,12 @@ function addMethodToMSE(clazz: ClassDeclaration) {
     if (clazz.getMethods().length > 0) {
         clazz.getMethods().forEach(meth => {
             var tmpReturnType = convertTStypeToJava(meth.getReturnType().getText());
-            entitiesIds["Method-" + meth.getName()] = id;
+            data.entitiesIds["Method-" + meth.getName()] = data.id;
 
-            mseFile += "    (" + famixPrefix + ".Method (id: " + id++ + ")\n";
+            mseFile += "    (" + famixPrefix + ".Method (id: " + data.id++ + ")\n";
             mseFile += "        (name '" + meth.getName() + "')\n";
             mseFile += "		(cyclomaticComplexity 1)\n";
-            mseFile += "		(declaredType (ref: " + typesDictionary[tmpReturnType] + "))\n";
+            mseFile += "		(declaredType (ref: " + data.typesDictionary[tmpReturnType] + "))\n";
 
             // Checking the modifiers
             //checkAnEntityModifier(meth, mseFile);
@@ -178,7 +170,7 @@ function addMethodToMSE(clazz: ClassDeclaration) {
             }
 
             mseFile += "		(numberOfStatements " + meth.getStatements().length + ")\n";
-            mseFile += "		(parentType (ref: " + parentClassId + "))\n";
+            mseFile += "		(parentType (ref: " + data.parentClassId + "))\n";
 
 
             // Not including the return type
@@ -209,14 +201,14 @@ function addMethodsParametersToMSE(clazz: ClassDeclaration) {
     if (clazz.getMethods().length > 0) {
         clazz.getMethods().forEach(me => {
             if (me.getParameters().length > 0) {
-                const methodId = entitiesIds["Method-" + me.getName()];
+                const methodId = data.entitiesIds["Method-" + me.getName()];
                 me.getParameters().forEach(pa => {
                     const tmpReturnType = convertTStypeToJava(pa.getType().getText());
-                    entitiesIds["Parameter-" + pa.getName()] = id;
+                    data.entitiesIds["Parameter-" + pa.getName()] = data.id;
 
-                    mseFile += "    (" + famixPrefix + ".Parameter (id: " + id++ + ")\n";
+                    mseFile += "    (" + famixPrefix + ".Parameter (id: " + data.id++ + ")\n";
                     mseFile += "		(name '" + pa.getName() + "')\n";
-                    mseFile += "		(declaredType (ref: " + typesDictionary[tmpReturnType] + "))\n";
+                    mseFile += "		(declaredType (ref: " + data.typesDictionary[tmpReturnType] + "))\n";
                     mseFile += "		(parentBehaviouralEntity (ref: " + methodId + ")))\n";
 
                 });
@@ -232,7 +224,7 @@ function addClassesAttributesToMSE(clazz: ClassDeclaration) {
 
     clazz.getMembers().forEach(mem => {
         tmpReturnType = convertTStypeToJava(mem.getType().getText());
-        const classId = entitiesIds["Class-" + clazz.getName()];
+        const classId = data.entitiesIds["Class-" + clazz.getName()];
 
         if (tmpReturnType != 'Unknown') {
             const str1 = mem.getText();
@@ -240,9 +232,9 @@ function addClassesAttributesToMSE(clazz: ClassDeclaration) {
             const str2 = str1.substring(0, pos1).trim();
             const memName = str2.toLowerCase();
 
-            mseFile += "    (" + famixPrefix + ".Attribute (id: " + id++ + ")\n";
+            mseFile += "    (" + famixPrefix + ".Attribute (id: " + data.id++ + ")\n";
             mseFile += "		(name '" + memName + "')\n";
-            mseFile += "		(declaredType (ref: " + typesDictionary[tmpReturnType] + "))\n";
+            mseFile += "		(declaredType (ref: " + data.typesDictionary[tmpReturnType] + "))\n";
 
             //checkAnEntityModifier(mem, mseFile);
             // Checking the modifiers
@@ -270,7 +262,7 @@ function addClassesAttributesToMSE(clazz: ClassDeclaration) {
 
 
 function addOtherTypesClassToMSE(typeName: string, typeId: number) {
-    entitiesIds["OtherType-" + typeName] = typeId;
+    data.entitiesIds["OtherType-" + typeName] = typeId;
 
     mseFile += "    (" + famixPrefix + ".Class (id: " + typeId + ")\n";
     mseFile += "        (name '" + typeName + "')\n";
@@ -282,25 +274,25 @@ function addOtherTypesClassToMSE(typeName: string, typeId: number) {
 
 function addTypesToMSE() {
     // Handling the primitive types first
-    primitiveTypesTab.forEach(pt => {
-        entitiesIds["PrimitiveType-" + pt] = typesDictionary[pt];
+    data.primitiveTypesTab.forEach(pt => {
+        data.entitiesIds["PrimitiveType-" + pt] = data.typesDictionary[pt];
 
-        mseFile += "    (" + famixPrefix + ".PrimitiveType (id: " + typesDictionary[pt] + ")\n";
+        mseFile += "    (" + famixPrefix + ".PrimitiveType (id: " + data.typesDictionary[pt] + ")\n";
         mseFile += "		(name '" + pt + "')\n";
         mseFile += "		(isStub true))\n";
     });
 
     // Handling then the other types
-    otherTypesTab.forEach(ot => {
-        addOtherTypesClassToMSE(ot, typesDictionary[ot]);
+    data.otherTypesTab.forEach(ot => {
+        addOtherTypesClassToMSE(ot, data.typesDictionary[ot]);
     });
 }
 
 function addNamespacesToMSE() {
-    namespacesTab.forEach(na => {
-        entitiesIds["Namespace-" + na] = namespacesDictionary[na];
+    data.namespacesTab.forEach(na => {
+        data.entitiesIds["Namespace-" + na] = data.namespacesDictionary[na];
 
-        mseFile += "    (" + famixPrefix + ".Namespace (id: " + namespacesDictionary[na] + ")\n";
+        mseFile += "    (" + famixPrefix + ".Namespace (id: " + data.namespacesDictionary[na] + ")\n";
         mseFile += "		(name '" + na + "'))\n";
     });
 }
@@ -312,7 +304,7 @@ function getEntityContainerRef(clazz: ClassDeclaration): number {
         namespaceDefinition = "<Default Package>";
     }
 
-    return namespacesDictionary[namespaceDefinition];
+    return data.namespacesDictionary[namespaceDefinition];
 }
 
 function saveMSEFile(mseFile: string) {
@@ -346,13 +338,13 @@ function locateTypeToCategory(tmpParamType: string) {
     const tmpPrimitiveTypes = ['void', 'int', 'bool'];
     const tmpOtherTypes = ['String'];
     if (tmpPrimitiveTypes.includes(tmpParamType)) {
-        if (!primitiveTypesTab.includes(tmpParamType)) {
-            primitiveTypesTab.push(tmpParamType);
+        if (!data.primitiveTypesTab.includes(tmpParamType)) {
+            data.primitiveTypesTab.push(tmpParamType);
         }
     }
     if (tmpOtherTypes.includes(tmpParamType)) {
-        if (!otherTypesTab.includes(tmpParamType)) {
-            otherTypesTab.push(tmpParamType);
+        if (!data.otherTypesTab.includes(tmpParamType)) {
+            data.otherTypesTab.push(tmpParamType);
         }
     }
 }
