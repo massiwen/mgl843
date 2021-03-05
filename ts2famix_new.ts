@@ -121,10 +121,7 @@ project.getSourceFiles().forEach(sourceFile => {
 });
 
 
-initGoingThroughProject(project, 1);    // Adding Classes informations
-initGoingThroughProject(project, 2);    // Adding Methods informations
-initGoingThroughProject(project, 3);    // Adding Parameters informations
-initGoingThroughProject(project, 4);    // Adding classses' attributes informations
+initGoingThroughProject();    // Adding Classes informations
 
 
 /*
@@ -149,34 +146,24 @@ console.log('otherTypesTab.length: ' + otherTypesTab.length);
 // Saving mseFile string inside of an MSE file
 saveMSEFile(mseFile);
 
-function initGoingThroughProject(project: Project, process: number) {
-    project.getSourceFiles().forEach(srcFile => {
-        if (srcFile.getClasses().length > 0) {
-            srcFile.getClasses().forEach(aClass => {
-                switch (process) {
-                    case 1:     // Adding classes informations
-                        addClassToMSE(aClass, mseFile);
-                        break;
-                    case 2:     // Adding methods informations
-                        addMethodToMSE(aClass, parentClassId, mseFile);
-                        break;
-                    case 3:     // Adding methods' parameters informations
-                        addMethodsParametersToMSE(aClass);
-                        break;
-                    case 4:     // Adding classes' attributes
-                        addClassesAttributesToMSE(aClass);
-                        break;
-                    default:
-                        console.log("Error<initGoingThroughProject>: Unkonown process code");
-                }
+function initGoingThroughProject() {
 
+    let tasks = [addClassToMSE, addMethodToMSE, addMethodsParametersToMSE, addClassesAttributesToMSE]
+
+    tasks.forEach(task => {
+            project.getSourceFiles().forEach(srcFile => {
+                if (srcFile.getClasses().length > 0) {
+                    srcFile.getClasses().forEach(aClass => {
+                        task(aClass);
+                    });
+                }
             });
         }
-    });
-
+    )
 }
 
-function addClassToMSE(clazz: ClassDeclaration, mseDocument: string) {
+
+function addClassToMSE(clazz: ClassDeclaration) {
     parentClassId = id;
     let containerRef: number = getEntityContainerRef(clazz);
 
@@ -199,7 +186,7 @@ function addOtherTypesClassToMSE(typeName: string, typeId: number) {
     mseFile += ")\n";
 }
 
-function addMethodToMSE(clazz: ClassDeclaration, parentId: number, mseDocument: string) {
+function addMethodToMSE(clazz: ClassDeclaration) {
     if (clazz.getMethods().length > 0) {
         clazz.getMethods().forEach(meth => {
             var tmpReturnType = convertTStypeToJava(meth.getReturnType().getText());
@@ -226,7 +213,7 @@ function addMethodToMSE(clazz: ClassDeclaration, parentId: number, mseDocument: 
             }
 
             mseFile += "		(numberOfStatements " + meth.getStatements().length + ")\n";
-            mseFile += "		(parentType (ref: " + parentId + "))\n";
+            mseFile += "		(parentType (ref: " + parentClassId + "))\n";
 
 
             // Not including the return type
