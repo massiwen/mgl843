@@ -118,28 +118,23 @@ project.getSourceFiles().forEach(sourceFile => {
     }
 });
 
-initGoingThroughProject();
+let tasks = [addClassToMSE, addMethodToMSE, addMethodsParametersToMSE, addClassesAttributesToMSE]
 
-function initGoingThroughProject() {
+tasks.forEach(task => {
+        project.getSourceFiles().forEach(srcFile => {
+            if (srcFile.getClasses().length > 0) {
+                srcFile.getClasses().forEach(aClass => {
+                    task(aClass);
+                });
+            }
+        });
+    }
+)
 
-    let tasks = [addClassToMSE, addMethodToMSE, addMethodsParametersToMSE, addClassesAttributesToMSE]
-
-    tasks.forEach(task => {
-            project.getSourceFiles().forEach(srcFile => {
-                if (srcFile.getClasses().length > 0) {
-                    srcFile.getClasses().forEach(aClass => {
-                        task(aClass);
-                    });
-                }
-            });
-        }
-    )
-
-    addTypesToMSE();
-    addNamespacesToMSE();
-    mseFile += ')'
-    saveMSEFile(mseFile);
-}
+addTypesToMSE();
+addNamespacesToMSE();
+mseFile += ')'
+saveMSEFile(mseFile);
 
 
 function addClassToMSE(clazz: ClassDeclaration) {
