@@ -4,9 +4,10 @@ import {ClassHandler} from "./ClassHandler";
 import {GeneralHandler} from "./GeneralHandler";
 
 let data = new Data();
+let repo_name = 'entities'
 
 const project = new Project();
-project.addSourceFilesAtPaths("entities/**/*.ts");
+project.addSourceFilesAtPaths("src/main/resources/repo/"+repo_name+"/**/*.ts");
 
 project.getSourceFiles().forEach(sourceFile => {
     console.log('\nSource file: ' + sourceFile.getBaseName());
@@ -33,7 +34,7 @@ saveMSEFile(data.mseFile);
 
 function saveMSEFile(mseFile: string) {
     const fs = require('fs');
-    fs.writeFileSync('msefile-test.mse', mseFile);
+    fs.writeFileSync('src/main/resources/mse/'+repo_name+'.mse', mseFile);
     console.log('\nFile successfully created!');
 }
 
