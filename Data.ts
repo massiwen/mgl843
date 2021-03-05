@@ -9,4 +9,7 @@ export class Data {
     typesDictionary = {};
     entitiesIds = {};
     namespacesDictionary = {};
+
+    mseFile: string = '(\n';
+    famixPrefix = "Famix-Java-Entities";
 }

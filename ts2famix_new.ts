@@ -5,9 +5,6 @@ let data = new Data()
 
 const project = new Project();
 
-const famixPrefix = "Famix-Java-Entities";
-
-let mseFile: string = '(\n';
 
 project.addSourceFilesAtPaths("entities/**/*.ts");
 
@@ -95,8 +92,6 @@ project.getSourceFiles().forEach(sourceFile => {
                     console.log(paramOutput);
                 });
             }
-            //addClassToMSE(oneClass, mseFile);
-            //addMethodToMSE(oneClass, parentClassId, mseFile);
         });
 
 
@@ -125,8 +120,8 @@ tasks.forEach(task => {
 
 addTypesToMSE();
 addNamespacesToMSE();
-mseFile += ')'
-saveMSEFile(mseFile);
+data.mseFile += ')'
+saveMSEFile(data.mseFile);
 
 
 function addClassToMSE(clazz: ClassDeclaration) {
@@ -134,12 +129,12 @@ function addClassToMSE(clazz: ClassDeclaration) {
     let containerRef: number = getEntityContainerRef(clazz);
 
     data.entitiesIds["Class-" + clazz.getName()] = data.id;
-    mseFile += "    (" + famixPrefix + ".Class (id: " + data.id++ + ")\n";
-    mseFile += "        (name '" + clazz.getName() + "')\n";
-    mseFile += "        (modifiers 'public')";
-    mseFile += "\n        (typeContainer (ref: " + containerRef + "))";
+    data.mseFile += "    (" + data.famixPrefix + ".Class (id: " + data.id++ + ")\n";
+    data.mseFile += "        (name '" + clazz.getName() + "')\n";
+    data.mseFile += "        (modifiers 'public')";
+    data.mseFile += "\n        (typeContainer (ref: " + containerRef + "))";
 
-    mseFile += ")\n";
+    data.mseFile += ")\n";
 }
 
 
@@ -149,10 +144,10 @@ function addMethodToMSE(clazz: ClassDeclaration) {
             var tmpReturnType = convertTStypeToJava(meth.getReturnType().getText());
             data.entitiesIds["Method-" + meth.getName()] = data.id;
 
-            mseFile += "    (" + famixPrefix + ".Method (id: " + data.id++ + ")\n";
-            mseFile += "        (name '" + meth.getName() + "')\n";
-            mseFile += "		(cyclomaticComplexity 1)\n";
-            mseFile += "		(declaredType (ref: " + data.typesDictionary[tmpReturnType] + "))\n";
+            data.mseFile += "    (" + data.famixPrefix + ".Method (id: " + data.id++ + ")\n";
+            data.mseFile += "        (name '" + meth.getName() + "')\n";
+            data.mseFile += "		(cyclomaticComplexity 1)\n";
+            data.mseFile += "		(declaredType (ref: " + data.typesDictionary[tmpReturnType] + "))\n";
 
             // Checking the modifiers
             //checkAnEntityModifier(meth, mseFile);
@@ -162,15 +157,15 @@ function addMethodToMSE(clazz: ClassDeclaration) {
                 meth.getModifiers().forEach(mod => {
                     tmpTab.push(mod.getText());
                 });
-                mseFile += "        (modifiers";
+                data.mseFile += "        (modifiers";
                 tmpTab.forEach(element => {
-                    mseFile += " '" + element + "'";
+                    data.mseFile += " '" + element + "'";
                 });
-                mseFile += ")\n";
+                data.mseFile += ")\n";
             }
 
-            mseFile += "		(numberOfStatements " + meth.getStatements().length + ")\n";
-            mseFile += "		(parentType (ref: " + data.parentClassId + "))\n";
+            data.mseFile += "		(numberOfStatements " + meth.getStatements().length + ")\n";
+            data.mseFile += "		(parentType (ref: " + data.parentClassId + "))\n";
 
 
             // Not including the return type
@@ -189,9 +184,9 @@ function addMethodToMSE(clazz: ClassDeclaration) {
             }
             tmpString += ')';
             //mseFile += "		(signature '" + meth.getSignature().getParameters() + "()" + "')";
-            mseFile += tmpString + "')";
+            data.mseFile += tmpString + "')";
 
-            mseFile += ")\n";
+            data.mseFile += ")\n";
         });
     }
 }
@@ -206,10 +201,10 @@ function addMethodsParametersToMSE(clazz: ClassDeclaration) {
                     const tmpReturnType = convertTStypeToJava(pa.getType().getText());
                     data.entitiesIds["Parameter-" + pa.getName()] = data.id;
 
-                    mseFile += "    (" + famixPrefix + ".Parameter (id: " + data.id++ + ")\n";
-                    mseFile += "		(name '" + pa.getName() + "')\n";
-                    mseFile += "		(declaredType (ref: " + data.typesDictionary[tmpReturnType] + "))\n";
-                    mseFile += "		(parentBehaviouralEntity (ref: " + methodId + ")))\n";
+                    data.mseFile += "    (" + data.famixPrefix + ".Parameter (id: " + data.id++ + ")\n";
+                    data.mseFile += "		(name '" + pa.getName() + "')\n";
+                    data.mseFile += "		(declaredType (ref: " + data.typesDictionary[tmpReturnType] + "))\n";
+                    data.mseFile += "		(parentBehaviouralEntity (ref: " + methodId + ")))\n";
 
                 });
             }
@@ -232,9 +227,9 @@ function addClassesAttributesToMSE(clazz: ClassDeclaration) {
             const str2 = str1.substring(0, pos1).trim();
             const memName = str2.toLowerCase();
 
-            mseFile += "    (" + famixPrefix + ".Attribute (id: " + data.id++ + ")\n";
-            mseFile += "		(name '" + memName + "')\n";
-            mseFile += "		(declaredType (ref: " + data.typesDictionary[tmpReturnType] + "))\n";
+            data.mseFile += "    (" + data.famixPrefix + ".Attribute (id: " + data.id++ + ")\n";
+            data.mseFile += "		(name '" + memName + "')\n";
+            data.mseFile += "		(declaredType (ref: " + data.typesDictionary[tmpReturnType] + "))\n";
 
             //checkAnEntityModifier(mem, mseFile);
             // Checking the modifiers
@@ -244,16 +239,16 @@ function addClassesAttributesToMSE(clazz: ClassDeclaration) {
                 mem.getModifiers().forEach(mod => {
                     aTab.push(mod.getText());
                 });
-                mseFile += "        (modifiers";
+                data.mseFile += "        (modifiers";
                 aTab.forEach(element => {
-                    mseFile += " '" + element + "'";
+                    data.mseFile += " '" + element + "'";
                 });
-                mseFile += ")\n";
+                data.mseFile += ")\n";
             } else {
-                mseFile += "        (modifiers 'private')\n";
+                data.mseFile += "        (modifiers 'private')\n";
             }
 
-            mseFile += "		(parentType (ref: " + classId + ")))\n";
+            data.mseFile += "		(parentType (ref: " + classId + ")))\n";
         }
 
     });
@@ -264,11 +259,11 @@ function addClassesAttributesToMSE(clazz: ClassDeclaration) {
 function addOtherTypesClassToMSE(typeName: string, typeId: number) {
     data.entitiesIds["OtherType-" + typeName] = typeId;
 
-    mseFile += "    (" + famixPrefix + ".Class (id: " + typeId + ")\n";
-    mseFile += "        (name '" + typeName + "')\n";
-    mseFile += "		(isStub true)\n";
-    mseFile += "		(modifiers 'public' 'final')";
-    mseFile += ")\n";
+    data.mseFile += "    (" + data.famixPrefix + ".Class (id: " + typeId + ")\n";
+    data.mseFile += "        (name '" + typeName + "')\n";
+    data.mseFile += "		(isStub true)\n";
+    data.mseFile += "		(modifiers 'public' 'final')";
+    data.mseFile += ")\n";
 }
 
 
@@ -277,9 +272,9 @@ function addTypesToMSE() {
     data.primitiveTypesTab.forEach(pt => {
         data.entitiesIds["PrimitiveType-" + pt] = data.typesDictionary[pt];
 
-        mseFile += "    (" + famixPrefix + ".PrimitiveType (id: " + data.typesDictionary[pt] + ")\n";
-        mseFile += "		(name '" + pt + "')\n";
-        mseFile += "		(isStub true))\n";
+        data.mseFile += "    (" + data.famixPrefix + ".PrimitiveType (id: " + data.typesDictionary[pt] + ")\n";
+        data.mseFile += "		(name '" + pt + "')\n";
+        data.mseFile += "		(isStub true))\n";
     });
 
     // Handling then the other types
@@ -292,8 +287,8 @@ function addNamespacesToMSE() {
     data.namespacesTab.forEach(na => {
         data.entitiesIds["Namespace-" + na] = data.namespacesDictionary[na];
 
-        mseFile += "    (" + famixPrefix + ".Namespace (id: " + data.namespacesDictionary[na] + ")\n";
-        mseFile += "		(name '" + na + "'))\n";
+        data.mseFile += "    (" + data.famixPrefix + ".Namespace (id: " + data.namespacesDictionary[na] + ")\n";
+        data.mseFile += "		(name '" + na + "'))\n";
     });
 }
 
