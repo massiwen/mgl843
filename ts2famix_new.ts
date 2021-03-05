@@ -11,8 +11,6 @@ let typesDictionary = {};
 let entitiesIds = {};
 let namespacesDictionary = {};
 
-let classMembers;
-
 const project = new Project();
 
 const famixPrefix = "Famix-Java-Entities";
@@ -120,26 +118,7 @@ project.getSourceFiles().forEach(sourceFile => {
     }
 });
 
-
 initGoingThroughProject();
-
-
-addTypesToMSE();
-addNamespacesToMSE();
-
-mseFile += ')';
-
-// Debug
-console.log('\n\nMSEFile:\n' + mseFile);
-
-console.log(otherTypesTab);
-console.log(entitiesIds);
-console.log(classMembers);
-console.log('\ncomputedId: ' + computedId + ', id: ' + id);
-console.log('otherTypesTab.length: ' + otherTypesTab.length);
-
-// Saving mseFile string inside of an MSE file
-saveMSEFile(mseFile);
 
 function initGoingThroughProject() {
 
@@ -155,6 +134,11 @@ function initGoingThroughProject() {
             });
         }
     )
+
+    addTypesToMSE();
+    addNamespacesToMSE();
+    mseFile += ')'
+    saveMSEFile(mseFile);
 }
 
 
@@ -226,14 +210,25 @@ function addMethodToMSE(clazz: ClassDeclaration) {
 }
 
 
-function addOtherTypesClassToMSE(typeName: string, typeId: number) {
-    entitiesIds["OtherType-" + typeName] = typeId;
+function addMethodsParametersToMSE(clazz: ClassDeclaration) {
+    if (clazz.getMethods().length > 0) {
+        clazz.getMethods().forEach(me => {
+            if (me.getParameters().length > 0) {
+                const methodId = entitiesIds["Method-" + me.getName()];
+                me.getParameters().forEach(pa => {
+                    const tmpReturnType = convertTStypeToJava(pa.getType().getText());
+                    entitiesIds["Parameter-" + pa.getName()] = id;
 
-    mseFile += "    (" + famixPrefix + ".Class (id: " + typeId + ")\n";
-    mseFile += "        (name '" + typeName + "')\n";
-    mseFile += "		(isStub true)\n";
-    mseFile += "		(modifiers 'public' 'final')";
-    mseFile += ")\n";
+                    mseFile += "    (" + famixPrefix + ".Parameter (id: " + id++ + ")\n";
+                    mseFile += "		(name '" + pa.getName() + "')\n";
+                    mseFile += "		(declaredType (ref: " + typesDictionary[tmpReturnType] + "))\n";
+                    mseFile += "		(parentBehaviouralEntity (ref: " + methodId + ")))\n";
+
+                });
+            }
+        });
+    }
+
 }
 
 
@@ -279,26 +274,16 @@ function addClassesAttributesToMSE(clazz: ClassDeclaration) {
 }
 
 
-function addMethodsParametersToMSE(clazz: ClassDeclaration) {
-    if (clazz.getMethods().length > 0) {
-        clazz.getMethods().forEach(me => {
-            if (me.getParameters().length > 0) {
-                const methodId = entitiesIds["Method-" + me.getName()];
-                me.getParameters().forEach(pa => {
-                    const tmpReturnType = convertTStypeToJava(pa.getType().getText());
-                    entitiesIds["Parameter-" + pa.getName()] = id;
+function addOtherTypesClassToMSE(typeName: string, typeId: number) {
+    entitiesIds["OtherType-" + typeName] = typeId;
 
-                    mseFile += "    (" + famixPrefix + ".Parameter (id: " + id++ + ")\n";
-                    mseFile += "		(name '" + pa.getName() + "')\n";
-                    mseFile += "		(declaredType (ref: " + typesDictionary[tmpReturnType] + "))\n";
-                    mseFile += "		(parentBehaviouralEntity (ref: " + methodId + ")))\n";
-
-                });
-            }
-        });
-    }
-
+    mseFile += "    (" + famixPrefix + ".Class (id: " + typeId + ")\n";
+    mseFile += "        (name '" + typeName + "')\n";
+    mseFile += "		(isStub true)\n";
+    mseFile += "		(modifiers 'public' 'final')";
+    mseFile += ")\n";
 }
+
 
 function addTypesToMSE() {
     // Handling the primitive types first
