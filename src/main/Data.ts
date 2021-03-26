@@ -11,5 +11,5 @@ export class Data {
     namespacesDictionary = {};
 
     mseFile: string = '(\n';
-    famixPrefix = "Famix-Java-Entities";
+    famixPrefix = "FAMIX";
 }
